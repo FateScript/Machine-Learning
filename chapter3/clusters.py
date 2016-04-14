@@ -1,4 +1,6 @@
 from math import sqrt
+from PIL  import Image,ImageDraw
+import random
 
 def  readfile(filename):
     lines = [line for line in file(filename)]
@@ -29,6 +31,20 @@ def pearson(v1,v2):
     return 1.0 - num/den
     # return 1 minus pearson 
 
+def tanimoto(v1,v2):
+    c1,c2,shr = 0,0,0
+    
+    for i in range(len(v1)):
+        if v1[i] != 0:
+            c1 += 1
+        if v2[i] != 0:
+            c2 += 1
+        if v1[i]!=0 and v2[i]!=0:
+            shr += 1
+            
+    return 1.0 - (float(shr)/(c1+c2-shr))
+
+
 class bicluster:
     def __init__(self,vec,left=None,right=None,distance=0.0,id=None):
         self.left = left
@@ -44,12 +60,14 @@ def hcluster(rows,distance = pearson):
     clust = [bicluster(rows[i],id=i) for i in range(len(rows))]
     while len(clust) > 1:
         lowestpair = (0,1)
-        closest = distance(clust[0].vec,clust[0].vec)
+        
+        closest = distance(clust[0].vec,clust[1].vec)
         
         for i in range(len(clust)):
             for j in range(i+1,len(clust)):
                 if (clust[i].id,clust[j].id) not in distances:
-                    distances[(clust[i].id,clust[j].id)] = distance(clust[i].vec,clust[j].vec)
+                    distances[(clust[i].id,clust[j].id)] = \
+                    distance(clust[i].vec,clust[j].vec)
                 
                 d = distances[clust[i].id,clust[j].id]
                 if d < closest :
@@ -84,13 +102,175 @@ def printclust(clust,labels=None,n=0) :
     if clust.right != None : printclust(clust.right,labels=labels,n=n+1)
     
 
-blognames,words,data = readfile('blogdata.txt')
-clust = hcluster(data)
-#print clust.id
-printclust(clust,labels = blognames)
+def getheight(clust):
+    if clust.left == None and clust.right == None:
+        return 1
+    return getheight(clust.left) + getheight(clust.right)
+
+
+def getdepth(clust):
+    if clust.left == None and clust.right == None :
+        return 0
+    return max(getdepth(clust.left),getdepth(clust.right)) + clust.distance
+
+
+def drawdendrogram(clust,labels,jpeg = 'clusters.jpg'):
+    h = getheight(clust)*20
+    w = 1200
+    depth = getdepth(clust)
+    
+    scaling = float(w-150)/depth
+    
+    img = Image.new('RGB',(w,h),(255,255,255))
+    draw = ImageDraw.Draw(img)
+    
+    draw.line((0,h/2,10,h/2),fill = (255,0,0))
+    drawnode(draw,clust,10,(h/2),scaling,labels)
+    img.save(jpeg,'JPEG')
+    
+def drawnode(draw,clust,x,y,scaling,labels):
+    if clust.id < 0:
+        h1 = getheight(clust.left)*20
+        h2 = getheight(clust.right)*20
+        top = y - (h1+h2)/2
+        bottom = y + (h1+h2)/2
+        
+        ll = clust.distance * scaling
+        
+        draw.line((x,top+h1/2,x,bottom-h2/2),fill = (255,0,0))
+        
+        draw.line((x,top+h1/2,x+ll,top+h1/2),fill = (255,0,0))
+        
+        draw.line((x,bottom-h2/2,x+ll,bottom-h2/2),fill = (255,0,0))
+        
+        drawnode(draw,clust.left,x+ll,top+h1/2,scaling,labels)
+        drawnode(draw,clust.right,x+ll,bottom-h2/2,scaling,labels)
+        
+    else:
+        draw.text((x+5,y-7),labels[clust.id],(0,0,0))
+        
+
+def rotatematrix(data):
+    newdata=[]
+    for i in range(len(data[0])):
+        newrow = [data[j][i] for j in range(len(data))]
+        newdata.append(newrow)
+    return newdata
+
+def kcluster(rows,distance=pearson,k=4):
+    ranges = [(min([row[i] for row in rows]),max([row[i] for row in rows])) \
+    for i in range(len(rows[0]))]
+    
+    clusters=[[random.random()*(ranges[i][1]-ranges[i][0])+ranges[i][0] \
+    for i in range(len(rows[0]))] for j in range(k)]
+
+    lastmatches = None
+    for t in range(100):
+        print 'Iteration %d' % t
+        bestmatches = [[] for i in range(k)]
+        
+        for j in range(len(rows)):
+            row = rows[j]
+            bestmatch = 0
+            for i in range(k):
+                d = distance(clusters[i],row)
+                if d < distance(clusters[bestmatch],row):
+                    bestmatch = i
+            bestmatches[bestmatch].append(j)
+        
+        if bestmatches==lastmatches:
+            break
+        lastmatches = bestmatches
+    
+        for i in range(k):
+            avgs = [0.0]*len(rows[0])
+            if len(bestmatches[i]) > 0:
+                for rowid in bestmatches[i]:
+                    for m in range(len(rows[rowid])):
+                        avgs[m] += rows[rowid][m]
+                for j in range(len(avgs)):
+                    avgs[j] /= len(bestmatches[i])
+                clusters[i] = avgs
+    
+    return bestmatches
+        
+        
+def scaledown(data,distance=pearson,rate=0.01):
+    n = len(data)
+    
+    realdist = [[distance(data[i],data[j]) \
+    for j in range(n)] for i in range(0,n)]
+    
+    outersum = 0.0
+    
+    loc = [[random.random(),random.random()] for i in range(n)]
+    fakedist = [[0.0 for j in range(n)] for i in range(n)]
+    
+    lasterror = None
+    for m in range(0,1000):
+        for i in range(n):
+            for j in range(n):
+                fakedist[i][j] = sqrt(sum([pow(loc[i][x] - loc[j][x],2)
+                for x in range(len(loc[i]))]))
+        
+        grad = [[0.0,0.0] for i in range(n)]
+        
+        totalerror = 0
+        for k in range(n):
+            for j in range(n):
+                if(j==k): continue
+                errorterm = (fakedist[j][k] - realdist[j][k])/realdist[j][k]
+        
+                grad[k][0]+=((loc[k][0]-loc[j][0])/fakedist[j][k])*errorterm
+                grad[k][1]+=((loc[k][1]-loc[j][1])/fakedist[j][k])*errorterm
+            
+                totalerror+=abs(errorterm)
+        print totalerror
+        
+        if lasterror and lasterror <totalerror:
+            break
+        lasterror = totalerror
+        
+        for k in range(n):
+            loc[k][0] -= rate*grad[k][0]
+            loc[k][1] -= rate*grad[k][1]
+    return loc
+    
+
+def draw2d(data,labels,jpeg='mds2d.jpg'):
+    img = Image.new('RGB',(2000,2000),(255,255,255))
+    draw = ImageDraw.Draw(img)
+    for i in range(len(data)):
+        x = (data[i][0]+0.5)*1000
+        y = (data[i][1]+0.5)*1000
+        draw.text((x,y),labels[i],(0,0,0))
+    img.save(jpeg,'JPEG')
 
         
-    
+#blognames,words,data = readfile('blogdata.txt')
+#clust = hcluster(data)
 
-    
+#printclust(clust,labels = blognames)
+
+#drawdendrogram(clust,blognames,jpeg='blogclust.jpg')
+
+#rdata = rotatematrix(data)
+#wordclust = hcluster(rdata)
+#drawdendrogram(wordclust,labels=words,jpeg='wordclust.jpg')       
+
+#kclust = kcluster(data,k=10)
+#print [blognames[r] for r in kclust[0]]
+#print [blognames[r] for r in kclust[1]]    
+
+#wants,people,data = readfile('zebo.txt')
+#clust = hcluster(data,distance=tanimoto)
+#print wants
+#drawdendrogram(clust,wants)
+
+#blognames,words,data = readfile('blogdata.txt')
+#coords = scaledown(data)
+#draw2d(coords,blognames,jpeg='blogs2d.jpg')
+
+
+   
     
