@@ -110,13 +110,40 @@ class crawler:
                         if url.find("'") != -1:
                             continue
                         url = url.split('#')[0]
-                        if url[0:4] == 'https' and not self.isindexed(url):
+                        if url[0:5] == 'https' and not self.isindexed(url):
                             newpages.add(url)
                         linkText = self.gettextonly(link)
                         self.addlinkref(page,url,linkText)
                 
                 self.dbcommit()
             pages = newpages
+
+    def calculatepagerank(self,iterations=20):
+        self.con.execute('drop table if exists pagerank')
+        self.con.execute('create table pagerank(urlid primary key,score)')
+        
+        self.con.execute('insert into pagerank select rowid, 1.0 from urllist')
+        self.dbcommit()
+        
+        for i in range(iterations):
+            print "iteration %d" % (i)
+            for (urlid,) in self.con.execute('select rowid from urllist'):
+                pr = 0.15
+                
+                for (linker,) in self.con.execute(
+                'select distinct fromid from link where toid=%d' % urlid):
+                    linkingpr = self.con.execute(
+                    'select score from pagerank where urlid=%d' %linker).fetchone()[0]
+                    
+                    linkingcount = self.con.execute(
+                    'select count(*) from link where fromid=%d' %linker).fetchone()[0]
+                    
+                    pr+=0.85*(linkingpr/linkingcount)
+                
+                self.con.execute(
+                'update pagerank set score=%f where urlid=%d'%(pr,urlid))
+            self.dbcommit()
+
 
 
 class searcher:
@@ -162,7 +189,8 @@ class searcher:
         
         #weights = []
         #weights = [(1.0,self.frequencyscore(rows))]
-        weights = [(1.0,self.locationscore(rows))]
+        #weights = [(1.0,self.locationscore(rows))]
+        weights = [(1.0,self.linktextscore(rows,wordids))]
         
         
         for (weight,scores) in weights:
@@ -191,7 +219,7 @@ class searcher:
             return dict([(u,float(minscore)/max(vsmall,l)) for (u,l) \
             in scores.items()])
         else:
-            maxscore = max(scores.value())
+            maxscore = max(scores.values())
             if maxscore==0:
                 maxscore=vsmall
             return dict([(u,float(c)/maxscore) for (u,c) in scores.items()])
@@ -207,7 +235,7 @@ class searcher:
         locations=dict([(row[0],1000000) for row in rows])
         for row in rows:
             loc = sum(row[1:])
-            if loc<locations[rows[0]]:
+            if loc<locations[row[0]]:
                 locations[rows[0]] = loc
         return self.normalizescores(locations,smallIsBetter=1)
         
@@ -231,15 +259,33 @@ class searcher:
         for u in uniqueurls ])
         return self.normalizescores(inboundcount)
         
-#pagelist=['http://ctrlq.org/rss/']
+    def linktextscore(self,rows,wordids):
+        linkscores=dict([(row[0],0) for row in rows])
+        for wordid in wordids:
+            cur = self.con.execute(
+            'select link.fromid,link.toid from linkwords,link where wordid=%d and \
+            linkwords.linkid=link.rowid' %wordid)
+            for (fromid,toid) in cur:
+                if toid in linkscores:
+                    pr = self.con.execute(
+                    'select score from pagerank where urlid=%d' %fromid).fetchone()[0]
+                    linkscores[toid]+=pr
+        maxscore = max(linkscores.values())
+        normalizescores = dict([(u,float(1)/maxscore) for (u,l) in linkscores.items()])
+        return normalizescores
+        
+#pagelist=['https://en.wikipedia.org/wiki/Main_Page']
 #crawler=crawler('searchindex.db')
 #crawler.createindextables()
 #crawler.crawl(pagelist)
 
 #e = searcher('searchindex.db')
-#rows,wordids = e.getmatchrows('things man')
+#rows,wordids = e.getmatchrows('text')
 #print rows , wordids
 
 #e = searcher('searchindex.db')
-#e.query('google text')
+#e.query('current event')
+
+#crawler = crawler('searchindex.db')
+#crawler.calculatepagerank()
 
