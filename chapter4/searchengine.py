@@ -30,7 +30,7 @@ class crawler:
     def addtoindex(self,url,soup):
         if self.isindexed(url) : 
             return
-        print 'Indexing '+url
+        print 'Indexing ' + url
         
         text = self.gettextonly(soup)
         words = self.separatewords(text)
@@ -73,7 +73,22 @@ class crawler:
         return False
     
     def addlinkref(self,urlFrom,urlTo,linkText):
-        pass
+        words = self.separatewords(linkText)
+        fromid = self.getentryid('urllist','url',urlFrom)
+        toid = self.getentryid('urllist','url',urlTo)
+        if fromid == toid:
+            return
+        cur = self.con.execute(
+        'insert into link(fromid,toid) values (%d,%d)' %(fromid,toid))
+        linkid = cur.lastrowid
+        
+        for word in words:
+            if word in ignorewords:
+                continue
+            wordid = self.getentryid('wordlist','word',word)
+            self.con.execute(
+            'insert into linkwords(linkid,wordid) values (%d,%d)' %(linkid,wordid))
+    
     
     def createindextables(self):
         self.con.execute('create table urllist(url)')
@@ -188,9 +203,10 @@ class searcher:
         totalscores=dict([(row[0],0) for row in rows])
         
         #weights = []
-        #weights = [(1.0,self.frequencyscore(rows))]
+        weights = [(1.0,self.frequencyscore(rows))]
         #weights = [(1.0,self.locationscore(rows))]
-        weights = [(1.0,self.linktextscore(rows,wordids))]
+        #weights = [(1.0,self.distancescore(rows))]
+        #weights = [(1.0,self.linktextscore(rows,wordids))]
         
         
         for (weight,scores) in weights:
@@ -240,7 +256,7 @@ class searcher:
         return self.normalizescores(locations,smallIsBetter=1)
         
     def distancescore(self,rows):
-        if len(rows[0]<=2):
+        if len(rows[0])<=2:
             return dict([ (row[0],1.0) for row in rows])
             
         mindistance = dict([(row[0],1000000) for row in rows])
@@ -274,7 +290,7 @@ class searcher:
         normalizescores = dict([(u,float(1)/maxscore) for (u,l) in linkscores.items()])
         return normalizescores
         
-#pagelist=['https://en.wikipedia.org/wiki/Main_Page']
+#pagelist=['https://en.wikipedia.org/wiki/Computer_science']
 #crawler=crawler('searchindex.db')
 #crawler.createindextables()
 #crawler.crawl(pagelist)
@@ -283,9 +299,13 @@ class searcher:
 #rows,wordids = e.getmatchrows('text')
 #print rows , wordids
 
-#e = searcher('searchindex.db')
-#e.query('current event')
+e = searcher('searchindex.db')
+e.query('Hello world')
 
+#e = searcher('searchindex.db')
 #crawler = crawler('searchindex.db')
 #crawler.calculatepagerank()
-
+#cur = crawler.con.execute('select * from pagerank order by score desc')
+#for i in range(10):
+#    res = cur.next()[0]
+#    print e.geturlname(res)
