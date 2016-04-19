@@ -5,8 +5,8 @@ It contains all codes when I was learning ***Programming Collective Intelligence
 
 #Instruction  
 
-点击下载，使用python运行即可  
-Download them and run them with python
+点击下载，使用python运行即可（ipython更好）  
+Download them and run them with python(ipython better)
 # Language  
 
   * Python
@@ -21,7 +21,11 @@ Download them and run them with python
 ### 2016.4.14
   * 完成并且上传第三章代码  
    complete and upload the source code of 3rd chapter
- 
+
+### 2016.4.19
+  * 完成并且上传第四章代码  
+   complete and upload the source code of 4th chapter 
+
 # About  
 
 * author : [Fatescript](https://github.com/FateScript)
