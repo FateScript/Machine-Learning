@@ -18,13 +18,18 @@ Download them and run them with python(ipython better)
 
   * 创建库，并且上传第二章代码  
   create the repository and upload the source code of 2nd chapter  
+
 ### 2016.4.14
   * 完成并且上传第三章代码  
    complete and upload the source code of 3rd chapter
 
 ### 2016.4.19
   * 完成并且上传第四章代码  
-   complete and upload the source code of 4th chapter 
+   complete and upload the source code of 4th chapter  
+
+### 2016.4.24
+  * 完成并上传第五章代码，其中关于遗传算法的实现中的mutate函数原书有bug，有所更改  
+  complete and upload the source code of 5th chapter and I change the code of function mutate in class geneticoptimize because the original code has some bug
 
 # About  
 
