@@ -31,6 +31,10 @@ Download them and run them with python(ipython better)
   * 完成并上传第五章代码，其中关于遗传算法的实现中的mutate函数原书有bug，有所更改  
   complete and upload the source code of 5th chapter and I change the code of function mutate in class geneticoptimize because the original code has some bug
 
+### 2016.5.1
+ * 完成并上传第六章代码，其中主要包含针对朴素贝叶斯分类器，费舍尔分类器的代码  
+  complete and upload the source code of 6th chapter,it mainly contains code about Naive Bayes Classifier and Fisher Classifier.
+
 # About  
 
 * author : [Fatescript](https://github.com/FateScript)
