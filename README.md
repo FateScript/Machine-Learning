@@ -35,6 +35,10 @@ Download them and run them with python(ipython better)
  * 完成并上传第六章代码，其中主要包含针对朴素贝叶斯分类器，费舍尔分类器的代码  
   complete and upload the source code of 6th chapter,it mainly contains code about Naive Bayes Classifier and Fisher Classifier.
 
+### 2016.5.2
+ * 完成并上传第七章决策树代码，其中简直函数prune与原书略有差别  
+  complete and upload the source code 7th chapter,in function prune,I change a place,so it can be a little different from the book 
+
 # About  
 
 * author : [Fatescript](https://github.com/FateScript)
