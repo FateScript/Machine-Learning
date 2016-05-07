@@ -37,11 +37,15 @@ Download them and run them with python(ipython better)
 
 ### 2016.5.2
  * 完成并上传第七章决策树代码，其中简直函数prune与原书略有差别  
-  complete and upload the source code of 7th chapter,in function prune,I change a place,so it can be a little different from the book 
+  complete and upload the source code of 7th chapter,in function prune,I change a place,so it can be a little different from the book  
 
 ### 2016.5.3
  * 完成并上传第八章（k近邻算法）  
     complete and upload the source code of 8th chapter(kNN algorithm)  
+
+### 2016.5.7
+ * 完成并上传第九章（支持向量机）  
+    complete and upload the source code of 9th chapter(SVM)
 
 # About  
 

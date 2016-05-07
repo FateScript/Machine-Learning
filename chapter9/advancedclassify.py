@@ -50,6 +50,9 @@ def dotproduct(v1,v2):
     return sum([v1[i]*v2[i] for i in range(len(v1))])
 
 
+def veclength(v):
+    return sum([p**2 for p in v])
+
 def dpclassify(point,avgs):
     b = (dotproduct(avgs[1],avgs[1]) - dotproduct(avgs[0],avgs[0]))/2
     y = dotproduct(point,avgs[0]) - dotproduct(point,avgs[1]) + b
@@ -104,16 +107,84 @@ def scaledata(rows):
             if d[i]>high[i]:
                 high[i] = d[i]
 
+
     def scaleinput(d):
-        return [(d.data[i]-low[i])/(high[i]-low[i]) for i in range(len(low)) ]
+        """
+        result = []
+        for i in range(len(low)):
+            if high[i]-low[i] == 0:
+                result.append(1)
+            else :
+                result.append((d[i]-low[i])/(high[i]-low[i]))
+        return result
+        """
+        return [(d[i]-low[i])/(high[i]-low[i]) for i in range(len(low)-1) ]
 
     newrows = [matchrow(scaleinput(row.data) + [row.match]) for row in rows]
 
     return newrows,scaleinput
+
+def rbf(v1,v2,gamma=20):
+    dv = [v1[i]-v2[i] for i in range(len(v1))]
+    l = veclength(dv)
+    return math.e**(-gamma*l)
+
+
+def nonlinearclassify(point,rows,offset,gamma=10):
+    sum0 = 0.0
+    sum1 = 0.0
+    count0 = 0
+    count1 = 0
+
+    for row in rows:
+        if row.match == 0:
+            sum0 += rbf(point,row.data,gamma)
+            count0 += 1
+        else :
+            sum1 += rbf(point,row.data,gamma)
+            count1 += 1
+    y = (1.0/count0)*sum0 - (1.0/count1)*sum1 + offset
+
+    if y>0:
+        return 0
+    else:
+        return 1
+
+def getoffset(rows,gamma=10):
+    l0 = []
+    l1 = []
+    for row in rows:
+        if row.match == 0:
+            l0.append(row.data)
+        else :
+            l1.append(row.data)
+    sum0 = sum(sum([rbf(v1,v2,gamma) for v1 in l0]) for v2 in l0)
+    sum1 = sum(sum([rbf(v1,v2,gamma) for v1 in l1]) for v2 in l1)
+
+    return (1.0/(len(l1)**2))*sum1-(1.0/(len(l0)**2))*sum0
+
+
+
+
 """
 agesonly = loadmatch('agesonly.csv',allnum=True)
 matchmake = loadmatch('matchmaker.csv')
 #plotagematches(agesonly)
+
+
 avgs = lineartrain(agesonly)
-print dpclassify([30,25],avgs)
+#print dpclassify([31,34],avgs)
+numericalset = loadnumerical()
+scaledset,scalef = scaledata(numericalset)
+
+
+ageoffset = getoffset(agesonly)
+print nonlinearclassify([48,20],agesonly,ageoffset)
+
+
+ssoffset = getoffset(scaledset)
+newrow = [28.0,-1,-1,26.0,-1,1,2]
+print nonlinearclassify(scalef(newrow),scaledset,ssoffset)
+newrow = [28.0,-1,1,26.0,-1,1,2]
+print nonlinearclassify(scalef(newrow),scaledset,ssoffset)
 """
